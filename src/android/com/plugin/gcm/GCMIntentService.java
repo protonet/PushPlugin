@@ -1,6 +1,10 @@
 package com.plugin.gcm;
 
 import java.util.List;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.IOException;
 
 import com.google.android.gcm.GCMBaseIntentService;
 import org.json.JSONException;
@@ -17,126 +21,171 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 @SuppressLint("NewApi")
 public class GCMIntentService extends GCMBaseIntentService {
 
-	public static final int NOTIFICATION_ID = 237;
-	private static final String TAG = "GCMIntentService";
-	
-	public GCMIntentService() {
-		super("GCMIntentService");
-	}
+  public static final int NOTIFICATION_ID = 237;
+  private static final String TAG = "GCMIntentService";
+  
+  public GCMIntentService() {
+    super("GCMIntentService");
+  }
 
-	@Override
-	public void onRegistered(Context context, String regId) {
+  @Override
+  public void onRegistered(Context context, String regId) {
 
-		Log.v(TAG, "onRegistered: "+ regId);
+    Log.v(TAG, "onRegistered: "+ regId);
 
-		JSONObject json;
+    JSONObject json;
 
-		try
-		{
-			json = new JSONObject().put("event", "registered");
-			json.put("regid", regId);
+    try {
+      json = new JSONObject();
+      json.put("event", "registered");
+      json.put("regid", regId);
 
-			Log.v(TAG, "onRegistered: " + json.toString());
+      Log.v(TAG, "onRegistered: " + json.toString());
 
-			// Send this JSON data to the JavaScript application above EVENT should be set to the msg type
-			// In this case this is the registration ID
-			PushPlugin.sendJavascript( json );
+      // Send this JSON data to the JavaScript application above EVENT should be set to the msg type
+      // In this case this is the registration ID
+      PushPlugin.sendJavascript(json);
 
-		}
-		catch( JSONException e)
-		{
-			// No message to the user is sent, JSON failed
-			Log.e(TAG, "onRegistered: JSON exception");
-		}
-	}
+    } catch( JSONException e) {
+      // No message to the user is sent, JSON failed
+      Log.e(TAG, "onRegistered: JSON exception");
+    }
+  }
 
-	@Override
-	public void onUnregistered(Context context, String regId) {
-		Log.d(TAG, "onUnregistered - regId: " + regId);
-	}
+  @Override
+  public void onUnregistered(Context context, String regId) {
+    Log.d(TAG, "onUnregistered - regId: " + regId);
+  }
 
-	@Override
-	protected void onMessage(Context context, Intent intent) {
-		Log.d(TAG, "onMessage - context: " + context);
+  @Override
+  protected void onMessage(Context context, Intent intent) {
+    Log.d(TAG, "onMessage - context: " + context);
 
-		// Extract the payload from the message
-		Bundle extras = intent.getExtras();
-		if (extras != null)
-		{
-			// if we are in the foreground, just surface the payload, else post it to the statusbar
-            if (PushPlugin.isInForeground()) {
-				extras.putBoolean("foreground", true);
-                PushPlugin.sendExtras(extras);
-			}
-			else {
-				extras.putBoolean("foreground", false);
+    Bundle extras = intent.getExtras();
+    
+    String silent = extras.getString("silent");
+    
+    if (silent != null && silent.equals("true")) {
+      onSilentMessage(context, extras);
+    } else {
+      onLoudMessage(context, extras);
+    }
+  }
 
-                // Send a notification if there is a message
-                if (extras.getString("message") != null && extras.getString("message").length() != 0) {
-                    createNotification(context, extras);
-                }
-            }
-        }
-	}
+  protected void onSilentMessage(Context context, Bundle extras) {
+    try {
+      JSONObject json = new JSONObject();
+      
+      String payload = extras.getString("payload");
+      
+      JSONObject jsonPayload = new JSONObject(payload);
+      
+      json.put("event", "silentpush");
+      json.put("foreground", PushPlugin.isInForeground());
+      json.put("payload", jsonPayload);
+      
+      Log.v(TAG, "onMessage: " + json.toString());
 
-	public void createNotification(Context context, Bundle extras)
-	{
-		NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-		String appName = getAppName(this);
+      // Send this JSON data to the JavaScript application above EVENT should be set to the msg type
+      // In this case this is the registration ID
+      PushPlugin.sendJavascript(json);
 
-		Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
-		notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-		notificationIntent.putExtra("pushBundle", extras);
+    } catch(JSONException e) {
+      // No message to the user is sent, JSON failed
+      Log.e(TAG, "onSilentMessage: JSON exception");
+    }
+  }
 
-		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-		
-		NotificationCompat.Builder mBuilder =
-			new NotificationCompat.Builder(context)
-				.setDefaults(Notification.DEFAULT_ALL)
-				.setSmallIcon(context.getApplicationInfo().icon)
-				.setWhen(System.currentTimeMillis())
-				.setContentTitle(extras.getString("title"))
-				.setTicker(extras.getString("title"))
-				.setContentIntent(contentIntent);
+  protected void onLoudMessage(Context context, Bundle extras) {
+    createNotification(context, extras);
+  }
 
-		String message = extras.getString("message");
-		if (message != null) {
-			mBuilder.setContentText(message);
-		} else {
-			mBuilder.setContentText("<missing message content>");
-		}
+  public void createNotification(Context context, Bundle extras) {
+    NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    String appName = getAppName(this);
 
-		String msgcnt = extras.getString("msgcnt");
-		if (msgcnt != null) {
-			mBuilder.setNumber(Integer.parseInt(msgcnt));
-		}
-		
-		mNotificationManager.notify((String) appName, NOTIFICATION_ID, mBuilder.build());
-	}
-	
-	public static void cancelNotification(Context context)
-	{
-		NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		mNotificationManager.cancel((String)getAppName(context), NOTIFICATION_ID);	
-	}
-	
-	private static String getAppName(Context context)
-	{
-		CharSequence appName = 
-				context
-					.getPackageManager()
-					.getApplicationLabel(context.getApplicationInfo());
-		
-		return (String)appName;
-	}
-	
-	@Override
-	public void onError(Context context, String errorId) {
-		Log.e(TAG, "onError - errorId: " + errorId);
-	}
+    Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
+    notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    notificationIntent.putExtra("pushBundle", extras);
 
+    PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+    String payload = extras.getString("payload");
+
+    try {
+      JSONObject json = new JSONObject(payload);
+      
+      NotificationCompat.Builder mBuilder =
+        new NotificationCompat.Builder(context)
+          .setAutoCancel(true)
+          .setContentTitle(json.getString("title"))
+          .setContentText(json.getString("message"))
+          .setTicker(json.getString("message"))
+          .setSmallIcon(context.getApplicationInfo().icon)
+          .setVibrate(new long[] { 300, 300, 300, 300, 300 })
+          .setContentIntent(contentIntent)
+          .setWhen(System.currentTimeMillis());
+
+      String hexColor = json.getString("led_color");
+      if (hexColor != null) {
+        hexColor = hexColor.replace("#", "");
+        int aRGB = Integer.parseInt(hexColor, 16);
+        aRGB += 0xFF000000;
+        mBuilder.setLights(aRGB, 3000, 3000);
+      }
+
+      String iconUrl = json.getString("icon_url");
+      if (iconUrl != null) {
+        mBuilder.setLargeIcon(getBitmapFromURL(iconUrl));
+      }
+
+      mNotificationManager.notify(json.getInt("notification_id"), mBuilder.build());
+    } catch(JSONException e) {
+      // No message to the user is sent, JSON failed
+      Log.e(TAG, "createNotification: JSON exception", e);
+    }
+  }
+
+  public static void cancelNotification(Context context)
+  {
+    NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+    mNotificationManager.cancel((String)getAppName(context), NOTIFICATION_ID);
+  }
+
+  private static String getAppName(Context context)
+  {
+    CharSequence appName =
+        context
+          .getPackageManager()
+          .getApplicationLabel(context.getApplicationInfo());
+
+    return (String)appName;
+  }
+
+  public static Bitmap getBitmapFromURL(String strURL) {
+      try {
+          URL url = new URL(strURL);
+          HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+          connection.setDoInput(true);
+          connection.connect();
+          InputStream input = connection.getInputStream();
+          Bitmap myBitmap = BitmapFactory.decodeStream(input);
+          return myBitmap;
+      } catch (IOException e) {
+          e.printStackTrace();
+          return null;
+      }
+  }
+  
+  @Override
+  public void onError(Context context, String errorId) {
+    Log.e(TAG, "onError - errorId: " + errorId);
+  }
 }

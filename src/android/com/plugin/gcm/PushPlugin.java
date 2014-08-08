@@ -154,83 +154,25 @@ public class PushPlugin extends CordovaPlugin {
      */
     private static JSONObject convertBundleToJson(Bundle extras)
     {
-		try
-		{
-			JSONObject json;
-			json = new JSONObject().put("event", "message");
+    
+      try {
+        JSONObject json = new JSONObject();
+      
+        String payload = extras.getString("payload");
+      
+        JSONObject jsonPayload = new JSONObject(payload);
+      
+        json.put("event", "click");
+        json.put("foreground", isInForeground());
+        json.put("payload", jsonPayload);
         
-			JSONObject jsondata = new JSONObject();
-			Iterator<String> it = extras.keySet().iterator();
-			while (it.hasNext())
-			{
-				String key = it.next();
-				Object value = extras.get(key);	
-        	
-				// System data from Android
-				if (key.equals("from") || key.equals("collapse_key"))
-				{
-					json.put(key, value);
-				}
-				else if (key.equals("foreground"))
-				{
-					json.put(key, extras.getBoolean("foreground"));
-				}
-				else if (key.equals("coldstart"))
-				{
-					json.put(key, extras.getBoolean("coldstart"));
-				}
-				else
-				{
-					// Maintain backwards compatibility
-					if (key.equals("message") || key.equals("msgcnt") || key.equals("soundname"))
-					{
-						json.put(key, value);
-					}
-        		
-					if ( value instanceof String ) {
-					// Try to figure out if the value is another JSON object
-						
-						String strValue = (String)value;
-						if (strValue.startsWith("{")) {
-							try {
-								JSONObject json2 = new JSONObject(strValue);
-								jsondata.put(key, json2);
-							}
-							catch (Exception e) {
-								jsondata.put(key, value);
-							}
-							// Try to figure out if the value is another JSON array
-						}
-						else if (strValue.startsWith("["))
-						{
-							try
-							{
-								JSONArray json2 = new JSONArray(strValue);
-								jsondata.put(key, json2);
-							}
-							catch (Exception e)
-							{
-								jsondata.put(key, value);
-							}
-						}
-						else
-						{
-							jsondata.put(key, value);
-						}
-					}
-				}
-			} // while
-			json.put("payload", jsondata);
-        
-			Log.v(TAG, "extrasToJSON: " + json.toString());
+        Log.v(TAG, "extrasToJSON: " + json.toString());
 
-			return json;
-		}
-		catch( JSONException e)
-		{
-			Log.e(TAG, "extrasToJSON: JSON exception");
-		}        	
-		return null;      	
+        return json;
+      } catch(JSONException e) {
+        Log.e(TAG, "extrasToJSON: JSON exception");
+      }
+      return null;
     }
 
     public static boolean isInForeground()
