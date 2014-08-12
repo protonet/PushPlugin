@@ -119,6 +119,10 @@ public class GCMIntentService extends GCMBaseIntentService {
 
     String payload = extras.getString("payload");
 
+    if (payload == null) {
+      return;
+    }
+
     try {
       JSONObject json = new JSONObject(payload);
       
