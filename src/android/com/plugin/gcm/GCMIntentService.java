@@ -18,12 +18,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+
 
 @SuppressLint("NewApi")
 public class GCMIntentService extends GCMBaseIntentService {
@@ -132,7 +134,7 @@ public class GCMIntentService extends GCMBaseIntentService {
           .setContentTitle(json.getString("title"))
           .setContentText(json.getString("message"))
           .setTicker(json.getString("message"))
-          .setSmallIcon(context.getApplicationInfo().icon)
+          .setSmallIcon(getDefaultIcon(context))
           .setVibrate(new long[] { 300, 300, 300, 300, 300 })
           .setContentIntent(contentIntent)
           .setWhen(System.currentTimeMillis());
@@ -148,6 +150,8 @@ public class GCMIntentService extends GCMBaseIntentService {
       String iconUrl = json.getString("icon_url");
       if (iconUrl != null) {
         mBuilder.setLargeIcon(getBitmapFromURL(iconUrl));
+      } else {
+        mBuilder.setLargeIcon(getDefaultIconAsBitmap(context));
       }
 
       mNotificationManager.notify(json.getInt("notification_id"), mBuilder.build());
@@ -186,6 +190,26 @@ public class GCMIntentService extends GCMBaseIntentService {
           e.printStackTrace();
           return null;
       }
+  }
+  
+  public static int getDefaultIcon(Context context) {
+    Resources res = context.getResources();
+    
+    int icon = context.getApplicationInfo().icon;
+    
+    try {
+      icon = res.getIdentifier("notification", "drawable", context.getPackageName());
+    } catch(Exception e) {}
+    
+    return icon;
+  }
+  
+  public static Bitmap getDefaultIconAsBitmap(Context context) {
+    int icon = getDefaultIcon(context);
+    
+    Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), icon);
+    
+    return bmp;
   }
   
   @Override
