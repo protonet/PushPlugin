@@ -15,6 +15,6 @@
 - (void)applicationDidBecomeActive:(UIApplication *)application;
 - (id) getCommandInstance:(NSString*)className;
 
-@property (nonatomic, retain) NSDictionary	*launchNotification;
+@property (nonatomic, retain) NSDictionary  *launchNotification;
 
 @end
