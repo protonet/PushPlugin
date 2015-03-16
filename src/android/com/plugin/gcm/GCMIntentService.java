@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.IOException;
+import java.io.File;
 
 import com.google.android.gcm.GCMBaseIntentService;
 import org.json.JSONException;
@@ -19,13 +20,15 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-
+import android.app.Notification;
+import android.app.Notification.*;
+import android.net.http.HttpResponseCache;
 
 @SuppressLint("NewApi")
 public class GCMIntentService extends GCMBaseIntentService {
@@ -35,6 +38,12 @@ public class GCMIntentService extends GCMBaseIntentService {
   
   public GCMIntentService() {
     super("GCMIntentService");
+
+    try {
+      File httpCacheDir = new File(context.getCacheDir(), "http");
+      long httpCacheSize = 10 * 1024 * 1024; // 10 MiB
+      HttpResponseCache.install(httpCacheDir, httpCacheSize);
+    } catch (IOException e) {}
   }
 
   @Override
@@ -128,8 +137,8 @@ public class GCMIntentService extends GCMBaseIntentService {
     try {
       JSONObject json = new JSONObject(payload);
       
-      NotificationCompat.Builder mBuilder =
-        new NotificationCompat.Builder(context)
+      Notification.Builder mBuilder =
+        new Notification.Builder(context)
           .setAutoCancel(true)
           .setContentTitle(json.getString("title"))
           .setContentText(json.getString("message"))
@@ -139,12 +148,12 @@ public class GCMIntentService extends GCMBaseIntentService {
           .setContentIntent(contentIntent)
           .setWhen(System.currentTimeMillis());
 
-      String hexColor = json.getString("led_color");
-      if (hexColor != null) {
-        hexColor = hexColor.replace("#", "");
-        int aRGB = Integer.parseInt(hexColor, 16);
-        aRGB += 0xFF000000;
-        mBuilder.setLights(aRGB, 3000, 3000);
+      String ledColor = json.getString("led_color");
+      if (ledColor != null) {
+        ledColor = ledColor.replace("#", "");
+        int aRGBLed = Integer.parseInt(ledColor, 16);
+        aRGBLed += 0xFF000000;
+        mBuilder.setLights(aRGBLed, 3000, 3000);
       }
 
       String iconUrl = json.getString("icon_url");
@@ -152,6 +161,14 @@ public class GCMIntentService extends GCMBaseIntentService {
         mBuilder.setLargeIcon(getBitmapFromURL(iconUrl));
       } else {
         mBuilder.setLargeIcon(getDefaultIconAsBitmap(context));
+      }
+
+      String color = json.getString("color");
+      if (color != null && Build.VERSION.SDK_INT >= 21) {
+        color = color.replace("#", "");
+        int aRGBColor = Integer.parseInt(color, 16);
+        aRGBColor += 0xFF000000;
+        mBuilder.setColor(aRGBColor);
       }
 
       mNotificationManager.notify(json.getInt("notification_id"), mBuilder.build());
