@@ -4,8 +4,8 @@ import java.util.List;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.io.IOException;
 import java.io.File;
+import java.io.IOException;
 
 import com.google.android.gcm.GCMBaseIntentService;
 import org.json.JSONException;
@@ -38,12 +38,6 @@ public class GCMIntentService extends GCMBaseIntentService {
   
   public GCMIntentService() {
     super("GCMIntentService");
-
-    try {
-      File httpCacheDir = new File(context.getCacheDir(), "http");
-      long httpCacheSize = 10 * 1024 * 1024; // 10 MiB
-      HttpResponseCache.install(httpCacheDir, httpCacheSize);
-    } catch (IOException e) {}
   }
 
   @Override
@@ -68,6 +62,12 @@ public class GCMIntentService extends GCMBaseIntentService {
       // No message to the user is sent, JSON failed
       Log.e(TAG, "onRegistered: JSON exception");
     }
+
+    try {
+      File httpCacheDir = new File(context.getCacheDir(), "http");
+      long httpCacheSize = 10 * 1024 * 1024; // 10 MiB
+      HttpResponseCache.install(httpCacheDir, httpCacheSize);
+    } catch (IOException e) {}
   }
 
   @Override
@@ -198,6 +198,7 @@ public class GCMIntentService extends GCMBaseIntentService {
       try {
           URL url = new URL(strURL);
           HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+          connection.setUseCaches(true);
           connection.setDoInput(true);
           connection.connect();
           InputStream input = connection.getInputStream();
