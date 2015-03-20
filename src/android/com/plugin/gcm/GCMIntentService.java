@@ -148,7 +148,7 @@ public class GCMIntentService extends GCMBaseIntentService {
           .setContentIntent(contentIntent)
           .setWhen(System.currentTimeMillis());
 
-      String ledColor = json.getString("led_color");
+      String ledColor = json.has("led_color") ? json.getString("led_color") : null;
       if (ledColor != null) {
         ledColor = ledColor.replace("#", "");
         int aRGBLed = Integer.parseInt(ledColor, 16);
@@ -156,14 +156,14 @@ public class GCMIntentService extends GCMBaseIntentService {
         mBuilder.setLights(aRGBLed, 3000, 3000);
       }
 
-      String iconUrl = json.getString("icon_url");
+      String iconUrl = json.has("icon_url") ? json.getString("icon_url") : null;
       if (iconUrl != null) {
         mBuilder.setLargeIcon(getBitmapFromURL(iconUrl));
       } else {
         mBuilder.setLargeIcon(getDefaultIconAsBitmap(context));
       }
 
-      String color = json.getString("color");
+      String color = json.has("color") ? json.getString("color") : null;
       if (color != null && Build.VERSION.SDK_INT >= 21) {
         color = color.replace("#", "");
         int aRGBColor = Integer.parseInt(color, 16);
