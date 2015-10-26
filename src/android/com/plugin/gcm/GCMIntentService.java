@@ -145,6 +145,7 @@ public class GCMIntentService extends GCMBaseIntentService {
           .setTicker(json.getString("message"))
           .setSmallIcon(getDefaultIcon(context))
           .setVibrate(new long[] { 300, 300, 300, 300, 300 })
+          .setPriority(Notification.PRIORITY_HIGH)
           .setContentIntent(contentIntent)
           .setWhen(System.currentTimeMillis());
 
