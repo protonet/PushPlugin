@@ -1,5 +1,6 @@
 package com.plugin.gcm;
 
+import java.util.Random;
 import java.util.List;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -123,10 +124,12 @@ public class GCMIntentService extends GCMBaseIntentService {
     String appName = getAppName(this);
 
     Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
-    notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    notificationIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
     notificationIntent.putExtra("pushBundle", extras);
 
-    PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+    int requestCode = new Random().nextInt();
+
+    PendingIntent contentIntent = PendingIntent.getActivity(this, requestCode, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
     String payload = extras.getString("payload");
 
